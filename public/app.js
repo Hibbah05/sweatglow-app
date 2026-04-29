@@ -72,7 +72,7 @@ const elements = {
   statSessions: document.getElementById('statSessions'),
   statMinutes: document.getElementById('statMinutes'),
   statStreak: document.getElementById('statStreak'),
-  historyList: document.getElementById('historyList'), // Added for history
+  historyList: document.getElementById('historyList'),
 };
 
 async function initApp() {
@@ -85,7 +85,7 @@ async function initApp() {
 
   await fetchExercises();
   await fetchStats();
-  await fetchHistory(); // Fetch log on start
+  await fetchHistory();
   updateDisplay();
 }
 
@@ -111,7 +111,6 @@ async function fetchStats() {
   }
 }
 
-// FETCH HISTORY DATA
 async function fetchHistory() {
   try {
     const response = await fetch(`${API_BASE}/history`);
@@ -133,7 +132,6 @@ function renderExercises() {
     </div>`).join('');
 }
 
-// RENDER HISTORY LOG
 function renderHistory(history) {
   if (!elements.historyList) return;
   if (history.length === 0) return;
@@ -142,9 +140,7 @@ function renderHistory(history) {
     const date = new Date(item.recordedAt).toLocaleDateString('en-US', {
       month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
     });
-    
     const ex = exercises.find(e => e.id === item.exerciseId) || { name: 'Workout' };
-
     return `
       <div class="history-item">
         <div class="hist-info">
@@ -165,9 +161,7 @@ window.selectExercise = function(id) {
   selected = exercises.find(e => e.id === id);
   elements.noSelectMsg.style.display = 'none';
   elements.timerContent.style.display = 'block';
-  
   elements.exLabel.textContent = selected.name.toUpperCase();
-  
   resetTimer();
   renderPresets();
 };
@@ -204,9 +198,21 @@ function getInputTotal() {
   return (parseInt(elements.minInput.value, 10) || 0) * 60 + (parseInt(elements.secInput.value, 10) || 0);
 }
 
+// --- UPDATED START HANDLER WITH MOBILE UNLOCK ---
 function toggleTimer() {
-  if (!selected) return;
-  running ? pauseTimer() : startTimerGo();
+  // 1. MOBILE VOICE UNLOCK: Speak a silent message on user tap
+  const silentMsg = new SpeechSynthesisUtterance("");
+  window.speechSynthesis.speak(silentMsg);
+
+  // 2. MOBILE AUDIO UNLOCK: Resume audio context if it exists
+  const dummyCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (dummyCtx.state === 'suspended') dummyCtx.resume();
+
+  if (running) {
+    pauseTimer();
+  } else {
+    startTimerGo();
+  }
 }
 
 function startTimerGo() {
@@ -301,7 +307,6 @@ async function triggerAlarm() {
   elements.alarmOverlay.classList.add('show');
   
   playFunnySound(); 
-  
   await saveSession();
 }
 
@@ -320,7 +325,7 @@ async function saveSession() {
     if (!response.ok) return;
     const stats = await response.json();
     updateStats(stats);
-    await fetchHistory(); // Update history list immediately
+    await fetchHistory();
   } catch (error) {
     console.warn('Could not save session:', error);
   }
@@ -346,10 +351,14 @@ function snooze() {
   elements.timerStatus.textContent = 'snoozed 30s 😮‍💨';
 }
 
-function playFunnySound() {
+async function playFunnySound() {
   window.speechSynthesis.cancel();
   
   const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') {
+    await audioCtx.resume();
+  }
+
   beatInterval = setInterval(() => {
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
@@ -366,28 +375,30 @@ function playFunnySound() {
   }, 300); 
 
   setTimeout(() => {
-      const speakRandom = () => {
-          if (!speechInterval) return; 
+    const speakRandom = () => {
+      if (!speechInterval) return; 
 
-          const randomText = unhingedPhrases[Math.floor(Math.random() * unhingedPhrases.length)];
-          const message = new SpeechSynthesisUtterance(randomText);
-          
-          const voices = window.speechSynthesis.getVoices();
-          const femaleVoice = voices.find(v => 
-            v.name.includes('Female') || v.name.includes('Zira') || 
-            v.name.includes('Google US English') || v.name.includes('Samantha')
-          );
-          
-          if (femaleVoice) message.voice = femaleVoice;
-          message.pitch = 1.7; 
-          message.rate = 1.4;
-          message.volume = 1.0; 
+      const randomText = unhingedPhrases[Math.floor(Math.random() * unhingedPhrases.length)];
+      const message = new SpeechSynthesisUtterance(randomText);
+      
+      let voices = window.speechSynthesis.getVoices();
+      const femaleVoice = voices.find(v => 
+        v.name.includes('Samantha') || 
+        v.name.includes('Google US English') || 
+        v.name.includes('Female') || 
+        v.lang === 'en-US'
+      );
+      
+      if (femaleVoice) message.voice = femaleVoice;
+      message.pitch = 1.7; 
+      message.rate = 1.4;
+      message.volume = 1.0; 
 
-          window.speechSynthesis.speak(message);
-      };
+      window.speechSynthesis.speak(message);
+    };
 
-      speechInterval = setInterval(speakRandom, 4500);
-      speakRandom(); 
+    speechInterval = setInterval(speakRandom, 4500);
+    speakRandom(); 
   }, 1500); 
 }
 
