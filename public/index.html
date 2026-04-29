@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --grad1: linear-gradient(135deg, #f8a4d8 0%, #c084fc 50%, #818cf8 100%);
+  --grad2: linear-gradient(135deg, #fde68a 0%, #f9a8d4 50%, #c084fc 100%);
+  --grad3: linear-gradient(135deg, #a78bfa 0%, #ec4899 100%);
+  --pink: #ec4899;
+  --purple: #a855f7;
+  --lavender: #c4b5fd;
+  --soft: #fdf4ff;
+  --softer: #faf0fe;
+  --card: #ffffff;
+  --text: #3b1f5e;
+  --muted: #9d7bb5;
+  --border: rgba(168,85,247,0.15);
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: linear-gradient(160deg, #fce7f3 0%, #ede9fe 40%, #ddd6fe 100%);
+  min-height: 100vh;
+  color: var(--text);
+  overflow: hidden; /* Important for the dual-scroll sidebar layout */
+}
+
+/* --- SIDEBAR LAYOUT WRAPPER --- */
+.app-container {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* --- SIDEBAR (THE LOG) --- */
+.sidebar {
+  width: 300px;
+  background: white;
+  border-right: 1.5px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 24px 16px;
+  box-shadow: 4px 0 15px rgba(168,85,247,0.05);
+  z-index: 10;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s ease, padding 0.4s ease;
+  transform: translateX(0);
+}
+
+/* Minimize State */
+.sidebar.collapsed {
+  transform: translateX(-100%);
+  width: 0;
+  padding: 0;
+  border: none;
+}
+
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  min-width: 260px; /* Prevents text squishing during animation */
+}
+
+.history-list {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+/* Custom Scrollbar for Sidebar */
+.history-list::-webkit-scrollbar { width: 4px; }
+.history-list::-webkit-scrollbar-track { background: var(--softer); }
+.history-list::-webkit-scrollbar-thumb { background: var(--lavender); border-radius: 10px; }
+
+/* --- MAIN CONTENT AREA --- */
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 40px 20px;
+  display: flex;
+  justify-content: center;
+  position: relative;
+}
+
+.app {
+  max-width: 860px;
+  width: 100%;
+}
+
+/* --- TOGGLE BUTTONS --- */
+.toggle-btn {
+  background: var(--soft);
+  border: 1.5px solid var(--border);
+  color: var(--purple);
+  border-radius: 8px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-weight: 800;
+  transition: 0.2s;
+}
+.toggle-btn:hover { background: white; transform: scale(1.1); }
+
+.open-btn {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background: white;
+  border: 1.5px solid var(--border);
+  color: var(--purple);
+  padding: 10px 18px;
+  border-radius: 12px;
+  font-family: 'Syne', sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  display: none; /* Hidden when sidebar is open */
+  box-shadow: 0 4px 12px rgba(168,85,247,0.1);
+  z-index: 5;
+  transition: 0.3s;
+}
+.open-btn:hover { transform: translateX(5px); background: var(--soft); }
+
+.header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.logo {
+  font-family: 'Syne', sans-serif;
+  font-size: 42px;
+  font-weight: 800;
+  letter-spacing: -1.5px;
+  background: var(--grad3);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1;
+}
+
+.tagline {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+}
+
+.section-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 10px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.exercises-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 28px;
+  margin-top: 12px;
+}
+
+.ex-image-container {
+  width: 100%;
+  height: 110px;
+  overflow: hidden;
+  border-radius: 14px;
+  margin-bottom: 10px;
+  background: var(--softer);
+  border: 1px solid var(--border);
+}
+
+.ex-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.exercise-card:hover .ex-photo { transform: scale(1.1); }
+
+.exercise-card {
+  background: white;
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(168,85,247,0.06);
+}
+
+.exercise-card::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--grad1);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.exercise-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(168,85,247,0.15); }
+.exercise-card:hover::after { opacity: 1; }
+
+.exercise-card.selected {
+  border-color: var(--purple);
+  background: linear-gradient(135deg, #fdf4ff, #f5f3ff);
+  box-shadow: 0 6px 24px rgba(168,85,247,0.2);
+}
+
+.ex-name {
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  display: block;
+  margin-bottom: 2px;
+  text-transform: uppercase;
+}
+.ex-rec { font-size: 10px; color: var(--muted); font-weight: 500; }
+
+.timer-panel {
+  background: white;
+  border: 1.5px solid var(--border);
+  border-radius: 28px;
+  padding: 32px 28px;
+  margin-bottom: 20px;
+  text-align: center;
+  box-shadow: 0 4px 32px rgba(168,85,247,0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.timer-panel::before {
+  content: '';
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 160px; height: 160px;
+  background: linear-gradient(135deg, #f0abfc44, #c084fc22);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.selected-label {
+  font-family: 'Syne', sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  background: var(--grad3);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.motivation-ticker {
+  font-size: 13px;
+  color: var(--pink);
+  font-weight: 500;
+  min-height: 20px;
+  margin-bottom: 16px;
+}
+
+.ring-wrap {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  margin: 0 auto 20px;
+}
+
+.ring-wrap.pulsing { animation: pulseRing 1s ease-in-out infinite; }
+@keyframes pulseRing { 50% { transform: scale(1.03); } }
+
+.progress-svg { transform: rotate(-90deg); }
+.ring-bg { fill: none; stroke: #f3e8ff; stroke-width: 10; }
+.ring-fill {
+  fill: none;
+  stroke-width: 10;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s linear;
+  stroke: url(#ringGrad);
+}
+
+.timer-center {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.timer-big {
+  font-family: 'Syne', sans-serif;
+  font-size: 48px;
+  font-weight: 800;
+  background: var(--grad3);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.timer-status {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 4px;
+  text-transform: uppercase;
+}
+
+.presets-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.preset-btn {
+  background: linear-gradient(135deg, #fdf4ff, #f5f3ff);
+  border: 1.5px solid rgba(168,85,247,0.25);
+  border-radius: 99px;
+  padding: 6px 16px;
+  font-size: 11px;
+  color: var(--purple);
+  cursor: pointer;
+  transition: 0.15s;
+}
+
+.preset-btn:hover { background: var(--grad3); color: white; border-color: transparent; }
+
+.custom-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.custom-row input {
+  width: 68px;
+  background: #fdf4ff;
+  border: 1.5px solid rgba(168,85,247,0.2);
+  border-radius: 12px;
+  padding: 8px;
+  font-size: 18px;
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  color: var(--text);
+  text-align: center;
+}
+
+.controls-row {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.btn-main {
+  background: var(--grad3);
+  color: white;
+  border: none;
+  border-radius: 99px;
+  padding: 14px 44px;
+  font-family: 'Syne', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(168,85,247,0.35);
+}
+
+.btn-ghost {
+  background: white;
+  color: var(--purple);
+  border: 1.5px solid rgba(168,85,247,0.3);
+  border-radius: 99px;
+  padding: 14px 24px;
+  cursor: pointer;
+}
+
+.no-select {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 0;
+}
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: white;
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  padding: 16px 12px;
+  text-align: center;
+}
+
+.stat-val {
+  font-family: 'Syne', sans-serif;
+  font-size: 26px;
+  font-weight: 800;
+  background: var(--grad3);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.stat-lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; }
+
+/* INDIVIDUAL HISTORY ITEM STYLING */
+.history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--softer);
+  transition: background 0.2s;
+}
+
+.history-item:hover { background: var(--soft); border-radius: 8px; }
+
+.hist-info { display: flex; flex-direction: column; }
+.hist-name { font-weight: 700; font-size: 13px; color: var(--text); font-family: 'Syne', sans-serif; }
+.hist-date { font-size: 10px; color: var(--muted); }
+.hist-tag { 
+  background: var(--soft); 
+  color: var(--purple); 
+  padding: 4px 10px; 
+  border-radius: 99px; 
+  font-size: 10px; 
+  font-weight: 800; 
+  font-family: 'Syne', sans-serif;
+}
+
+.alarm-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(240,200,255,0.6);
+  backdrop-filter: blur(8px);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+}
+
+.alarm-overlay.show { display: flex; }
+
+.alarm-card {
+  background: white;
+  border-radius: 32px;
+  padding: 44px;
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.alarm-emoji { font-size: 64px; display: block; margin-bottom: 14px; }
+.alarm-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  background: var(--grad3);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+}
+
+.alarm-btns { display: flex; gap: 12px; justify-content: center; margin-top: 20px; }
+
+@media (max-width: 900px) {
+  .app-container { flex-direction: column; overflow-y: auto; }
+  .sidebar { width: 100%; height: auto; transform: none !important; border-right: none; border-bottom: 1.5px solid var(--border); }
+  .toggle-btn, .open-btn { display: none !important; }
+}
+
+</style>
+</head>
+<body>
+
+<div class="app-container">
+  
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="section-title">glow-up log 📖</div>
+      <button class="toggle-btn" onclick="toggleSidebar()">◀</button>
+    </div>
+    <div class="history-list" id="historyList">
+      <p style="color: var(--muted); font-size: 12px; text-align: center; padding: 20px;">
+        no sessions yet, let's get to work bestie!
+      </p>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <button class="open-btn" id="openBtn" onclick="toggleSidebar()">📖 Show Log</button>
+
+    <div class="app">
+      <div class="header">
+        <div class="logo">✨ SweatGlow ✨</div>
+        <div class="tagline">girlboss your fitness era</div>
+      </div>
+
+      <div class="section-title">pick your vibe 💅</div>
+      <div class="exercises-grid" id="exerciseGrid"></div>
+
+      <div class="timer-panel" id="timerPanel">
+        <div id="noSelectMsg" class="no-select">
+          <div class="bounce-arrow">👆</div>
+          <p>tap an exercise to start your glow-up era</p>
+        </div>
+
+        <div id="timerContent" style="display:none;">
+          <div class="selected-label" id="exLabel">—</div>
+          <div class="motivation-ticker" id="motiveTicker">let's get it bestie ✨</div>
+
+          <div class="ring-wrap" id="ringWrap">
+            <svg class="progress-svg" width="200" height="200" viewBox="0 0 200 200">
+              <defs>
+                <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#f472b6"/>
+                  <stop offset="50%" stop-color="#a855f7"/>
+                  <stop offset="100%" stop-color="#818cf8"/>
+                </linearGradient>
+              </defs>
+              <circle class="ring-bg" cx="100" cy="100" r="88"/>
+              <circle class="ring-fill" id="ringFill" cx="100" cy="100" r="88" stroke-dasharray="553" stroke-dashoffset="0"/>
+            </svg>
+            <div class="timer-center">
+              <div class="timer-big" id="timerBig">00:00</div>
+              <div class="timer-status" id="timerStatus">ready bestie</div>
+            </div>
+          </div>
+
+          <div class="section-title" style="margin-bottom:10px;">recommended ✨</div>
+          <div class="presets-row" id="presetsRow"></div>
+
+          <div class="custom-row">
+            <input type="number" id="minInput" min="0" max="59" value="1" placeholder="MM"/>
+            <span>min</span>
+            <input type="number" id="secInput" min="0" max="59" value="30" placeholder="SS"/>
+            <span>sec</span>
+          </div>
+
+          <div class="controls-row">
+            <button class="btn-ghost" id="btnReset" onclick="resetTimer()">Reset 🔄</button>
+            <button class="btn-main" id="btnStart">Start 🚀</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-val" id="statSessions">0</div><div class="stat-lbl">Sessions 💪</div></div>
+        <div class="stat-card"><div class="stat-val" id="statMinutes">0</div><div class="stat-lbl">Min Trained ⏱</div></div>
+        <div class="stat-card"><div class="stat-val" id="statStreak">0</div><div class="stat-lbl">Sets Done 🏆</div></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="alarm-overlay" id="alarmOverlay">
+  <div class="alarm-card" id="alarmCard">
+    <span class="alarm-emoji" id="alarmEmoji">🌸</span>
+    <div class="alarm-title" id="alarmTitle">SLAY COMPLETED!</div>
+    <div class="alarm-sub" id="alarmSub">you are literally THAT girl 💅</div>
+    <div class="alarm-btns">
+      <button class="btn-snooze" id="btnSnooze">Snooze 30s 😮‍💨</button>
+      <button class="btn-done" id="btnDone">Done! 🎀</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Sidebar Toggle Logic
+  function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const openBtn = document.getElementById('openBtn');
+    
+    sidebar.classList.toggle('collapsed');
+    
+    // Toggle the visible button on the main screen
+    if (sidebar.classList.contains('collapsed')) {
+      openBtn.style.display = 'block';
+    } else {
+      openBtn.style.display = 'none';
+    }
+  }
+</script>
+<script src="/app.js"></script>
+</body>
+</html>

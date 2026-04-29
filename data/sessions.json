@@ -1,0 +1,136 @@
+{
+  "sessions": [
+    {
+      "exerciseId": "rest",
+      "durationSeconds": 30,
+      "sets": 1,
+      "recordedAt": "2026-04-29T15:20:53.034Z"
+    },
+    {
+      "exerciseId": "squat",
+      "durationSeconds": 30,
+      "sets": 1,
+      "recordedAt": "2026-04-29T15:30:03.559Z"
+    },
+    {
+      "exerciseId": "rest",
+      "durationSeconds": 7,
+      "sets": 1,
+      "recordedAt": "2026-04-29T15:42:23.931Z"
+    },
+    {
+      "exerciseId": "rest",
+      "durationSeconds": 7,
+      "sets": 1,
+      "recordedAt": "2026-04-29T15:44:36.924Z"
+    },
+    {
+      "exerciseId": "squat",
+      "durationSeconds": 7,
+      "sets": 1,
+      "recordedAt": "2026-04-29T15:46:27.241Z"
+    },
+    {
+      "exerciseId": "squat",
+      "durationSeconds": 7,
+      "sets": 1,
+      "recordedAt": "2026-04-29T15:46:39.566Z"
+    },
+    {
+      "exerciseId": "squat",
+      "durationSeconds": 7,
+      "sets": 1,
+      "recordedAt": "2026-04-29T15:48:26.223Z"
+    },
+    {
+      "exerciseId": "squat",
+      "durationSeconds": 7,
+      "sets": 1,
+      "recordedAt": "2026-04-29T15:50:11.846Z"
+    },
+    {
+      "exerciseId": "squat",
+      "durationSeconds": 7,
+      "sets": 1,
+      "recordedAt": "2026-04-29T15:50:31.374Z"
+    },
+    {
+      "exerciseId": "squat",
+      "durationSeconds": 7,
+      "sets": 1,
+      "recordedAt": "2026-04-29T15:53:21.164Z"
+    },
+    {
+      "exerciseId": "squat",
+      "durationSeconds": 7,
+      "sets": 1,
+      "recordedAt": "2026-04-29T15:53:41.267Z"
+    },
+    {
+      "exerciseId": "squat",
+      "durationSeconds": 6,
+      "sets": 1,
+      "recordedAt": "2026-04-29T15:56:01.048Z"
+    },
+    {
+      "exerciseId": "squat",
+      "durationSeconds": 6,
+      "sets": 1,
+      "recordedAt": "2026-04-29T15:59:15.340Z"
+    },
+    {
+      "exerciseId": "squat",
+      "durationSeconds": 6,
+      "sets": 1,
+      "recordedAt": "2026-04-29T16:07:58.209Z"
+    },
+    {
+      "exerciseId": "squat",
+      "durationSeconds": 3,
+      "sets": 1,
+      "recordedAt": "2026-04-29T16:11:09.033Z"
+    },
+    {
+      "exerciseId": "squat",
+      "durationSeconds": 3,
+      "sets": 1,
+      "recordedAt": "2026-04-29T16:12:08.925Z"
+    },
+    {
+      "exerciseId": "squat",
+      "durationSeconds": 5,
+      "sets": 1,
+      "recordedAt": "2026-04-29T16:14:23.472Z"
+    },
+    {
+      "exerciseId": "squat",
+      "durationSeconds": 3,
+      "sets": 1,
+      "recordedAt": "2026-04-29T16:20:37.863Z"
+    },
+    {
+      "exerciseId": "squat",
+      "durationSeconds": 3,
+      "sets": 1,
+      "recordedAt": "2026-04-29T16:22:14.181Z"
+    },
+    {
+      "exerciseId": "glutes",
+      "durationSeconds": 1,
+      "sets": 1,
+      "recordedAt": "2026-04-29T16:57:45.112Z"
+    },
+    {
+      "exerciseId": "squats",
+      "durationSeconds": 3,
+      "sets": 1,
+      "recordedAt": "2026-04-29T18:06:53.790Z"
+    },
+    {
+      "exerciseId": "squats",
+      "durationSeconds": 6,
+      "sets": 1,
+      "recordedAt": "2026-04-29T18:12:03.203Z"
+    }
+  ]
+}
