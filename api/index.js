@@ -4,7 +4,7 @@ const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DATA_PATH = path.join(__dirname, 'data', 'sessions.json');
+const DATA_PATH = path.join(process.cwd(), 'data', 'sessions.json');
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));

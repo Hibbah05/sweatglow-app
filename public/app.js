@@ -318,14 +318,15 @@ async function saveSession() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         exerciseId: selected.id,
-        durationSeconds: totalSeconds,
-        sets: 1,
+        durationSeconds: totalSeconds
       }),
     });
-    if (!response.ok) return;
-    const stats = await response.json();
-    updateStats(stats);
-    await fetchHistory();
+    
+    if (response.ok) {
+      const stats = await response.json();
+      updateStats(stats);
+      await fetchHistory(); // <--- THIS line updates your "Glow-up Log"
+    }
   } catch (error) {
     console.warn('Could not save session:', error);
   }
@@ -355,21 +356,17 @@ async function playFunnySound() {
   window.speechSynthesis.cancel();
   
   const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  if (audioCtx.state === 'suspended') {
-    await audioCtx.resume();
-  }
+  if (audioCtx.state === 'suspended') await audioCtx.resume();
 
   beatInterval = setInterval(() => {
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     osc.connect(gain);
     gain.connect(audioCtx.destination);
-    
     osc.frequency.setValueAtTime(900, audioCtx.currentTime); 
     osc.type = 'square'; 
     gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
-    
     osc.start();
     osc.stop(audioCtx.currentTime + 0.15);
   }, 300); 
@@ -382,22 +379,26 @@ async function playFunnySound() {
       const message = new SpeechSynthesisUtterance(randomText);
       
       let voices = window.speechSynthesis.getVoices();
+      
+      // Expanded search for Female voices on Windows/Mac/Mobile
       const femaleVoice = voices.find(v => 
         v.name.includes('Samantha') || 
+        v.name.includes('Zira') || 
         v.name.includes('Google US English') || 
         v.name.includes('Female') || 
-        v.lang === 'en-US'
+        v.lang.startsWith('en')
       );
       
       if (femaleVoice) message.voice = femaleVoice;
-      message.pitch = 1.7; 
-      message.rate = 1.4;
+      
+      message.pitch = 1.6; 
+      message.rate = 0.9; // SLOWED DOWN from 1.4 to 0.9
       message.volume = 1.0; 
 
       window.speechSynthesis.speak(message);
     };
 
-    speechInterval = setInterval(speakRandom, 4500);
+    speechInterval = setInterval(speakRandom, 5000);
     speakRandom(); 
   }, 1500); 
 }
@@ -438,3 +439,8 @@ function updateStats(stats) {
 }
 
 initApp();
+
+// Pre-load voices for laptop browsers
+window.speechSynthesis.onvoiceschanged = () => {
+  window.speechSynthesis.getVoices();
+};
