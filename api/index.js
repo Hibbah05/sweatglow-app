@@ -1,34 +1,21 @@
 const express = require('express');
 const path = require('path');
-const fs = require('fs');
+const cors = require('cors');
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-const DATA_PATH = path.join(process.cwd(), 'data', 'sessions.json');
 
+// 1. Initialize Supabase
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+// Standard Vercel pathing for public assets
+app.use(express.static(path.join(process.cwd(), 'public')));
 
-function readSessions() {
-  try {
-    const raw = fs.readFileSync(DATA_PATH, 'utf-8');
-    return JSON.parse(raw);
-  } catch (error) {
-    return { sessions: [] };
-  }
-}
-
-function writeSessions(data) {
-  fs.writeFileSync(DATA_PATH, JSON.stringify(data, null, 2), 'utf-8');
-}
-
-function computeStats(records) {
-  const sessions = records.length;
-  const totalMinutes = records.reduce((sum, item) => sum + Math.round(item.durationSeconds / 60) || 1, 0);
-  const sets = records.reduce((sum, item) => sum + (item.sets || 1), 0);
-  return { sessions, totalMinutes, sets };
-}
-
+// Your exercise data stays here
 const exercises = [
   { id: 'squats', name: 'Squats', image: 'exercises/squats.jpg', recs: [30, 45, 60], tips: ['baby steps', 'solid werk', 'beast mode'] },
   { id: 'pushups', name: 'Push-ups', image: 'exercises/pushups.jpg', recs: [20, 40, 60], tips: ['warm-up era', 'level up', 'no mercy'] },
@@ -40,39 +27,67 @@ const exercises = [
   { id: 'glutes', name: 'Glute Gains', image: 'exercises/glutes.jpg', recs: [20, 40, 60], tips: ['fine ig', 'gassing up', 'main character'] },
 ];
 
+// Helper to calculate stats from Supabase rows
+function computeStats(records) {
+  const sessions = records.length;
+  const totalMinutes = records.reduce((sum, item) => sum + Math.round(item.duration_seconds / 60) || 1, 0);
+  const sets = records.reduce((sum, item) => sum + (item.sets || 1), 0);
+  return { sessions, totalMinutes, sets };
+}
+
 app.get('/api/exercises', (req, res) => {
   res.json({ exercises });
 });
 
-app.get('/api/stats', (req, res) => {
-  const data = readSessions();
-  res.json(computeStats(data.sessions));
+// 2. Updated Stats Route
+app.get('/api/stats', async (req, res) => {
+  const { data, error } = await supabase.from('workout_history').select('*');
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(computeStats(data));
 });
 
-app.get('/api/history', (req, res) => {
-  const data = readSessions();
-  const sortedHistory = data.sessions.sort((a, b) => new Date(b.recordedAt) - new Date(a.recordedAt));
-  res.json({ history: sortedHistory });
+// 3. Updated History Route
+app.get('/api/history', async (req, res) => {
+  const { data, error } = await supabase
+    .from('workout_history')
+    .select('*')
+    .order('recorded_at', { ascending: false });
+
+  if (error) return res.status(500).json({ error: error.message });
+  
+  // Mapping underscore names from DB to camelCase for your frontend
+  const history = data.map(item => ({
+    exerciseId: item.exercise_id,
+    durationSeconds: item.duration_seconds,
+    sets: item.sets,
+    recordedAt: item.recorded_at
+  }));
+  
+  res.json({ history });
 });
 
-app.post('/api/session', (req, res) => {
+// 4. Updated Session POST Route
+app.post('/api/session', async (req, res) => {
   const { exerciseId, durationSeconds, sets = 1 } = req.body;
-  if (!exerciseId || typeof durationSeconds !== 'number') {
-    return res.status(400).json({ error: 'Invalid session payload' });
-  }
-  const data = readSessions();
-  data.sessions.push({ exerciseId, durationSeconds, sets, recordedAt: new Date().toISOString() });
-  writeSessions(data);
-  return res.json(computeStats(data.sessions));
+  
+  const { data, error } = await supabase
+    .from('workout_history')
+    .insert([{ 
+      exercise_id: exerciseId, 
+      duration_seconds: durationSeconds, 
+      sets: sets 
+    }])
+    .select();
+
+  if (error) return res.status(500).json({ error: error.message });
+
+  // Fetch all to return updated stats
+  const { data: allData } = await supabase.from('workout_history').select('*');
+  return res.json(computeStats(allData));
 });
 
-// Wildcard MUST be last
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname,'..', 'public', 'index.html'));
+  res.sendFile(path.join(process.cwd(), 'public', 'index.html'));
 });
-
-//app.listen(PORT, () => {
-  //console.log(`Server running on http://localhost:${PORT}`);
-//});
 
 module.exports = app;
