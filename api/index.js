@@ -69,25 +69,30 @@ app.get('/api/history', async (req, res) => {
 // 4. Updated Session POST Route
 app.post('/api/session', async (req, res) => {
   const { exerciseId, durationSeconds, sets = 1 } = req.body;
-  
-  const { data, error } = await supabase
-    .from('workout_history')
-    .insert([{ 
-      exercise_id: exerciseId, 
-      duration_seconds: durationSeconds, 
-      sets: sets 
-    }])
-    .select();
 
-  if (error) return res.status(500).json({ error: error.message });
+  try {
+    const { data, error } = await supabase
+      .from('workout_history')
+      .insert([{ 
+        exercise_id: exerciseId, 
+        duration_seconds: durationSeconds, 
+        sets: sets 
+      }])
+      .select();
 
-  // Fetch all to return updated stats
-  const { data: allData } = await supabase.from('workout_history').select('*');
-  return res.json(computeStats(allData));
+    if (error) throw error;
+
+    // Fetch all records to calculate updated stats accurately
+    const { data: allRecords, error: fetchError } = await supabase
+      .from('workout_history')
+      .select('*');
+
+    if (fetchError) throw fetchError;
+
+    // Return the calculated stats
+    res.json(computeStats(allRecords));
+  } catch (error) {
+    console.error('Final Slay Error:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
-
-app.get('*', (req, res) => {
-  res.sendFile(path.join(process.cwd(), 'public', 'index.html'));
-});
-
-module.exports = app;
