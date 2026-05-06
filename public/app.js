@@ -1,4 +1,4 @@
-// Add this at the very top of your app.js to keep track of the AudioContext
+// Add this at the very top of your app.js
 let audioCtx;
 
 const API_BASE = '/api';
@@ -78,7 +78,7 @@ const elements = {
   alarmOverlay: document.getElementById('alarmOverlay'),
   alarmEmoji: document.getElementById('alarmEmoji'),
   alarmTitle: document.getElementById('alarmTitle'),
-  alarmSub: document.getElementById('alarmSub'),
+  alarmSub: document.querySelector('.alarm-sub'), // Changed to selector for safety
   statSessions: document.getElementById('statSessions'),
   statMinutes: document.getElementById('statMinutes'),
   statStreak: document.getElementById('statStreak'),
@@ -134,6 +134,7 @@ function onPoseResults(results) {
     const canvasElement = document.getElementById('output_canvas');
     const canvasCtx = canvasElement.getContext('2d');
     const feedback = document.getElementById('aiFeedback');
+    if(!canvasCtx) return;
     canvasCtx.save();
     canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
     canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
@@ -146,7 +147,7 @@ function onPoseResults(results) {
         if (hip && knee && ankle) {
             const angle = calculateAngle(hip, knee, ankle);
             const msgFunc = feedbackMessages[selected?.id] || feedbackMessages.default;
-            feedback.innerText = msgFunc(angle);
+            if(feedback) feedback.innerText = msgFunc(angle);
         }
     }
     canvasCtx.restore();
@@ -162,7 +163,6 @@ function calculateAngle(a, b, c) {
 // --- TIMER LOGIC ---
 function toggleTimer() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  window.speechSynthesis.speak(new SpeechSynthesisUtterance(""));
   if (audioCtx.state === 'suspended') audioCtx.resume();
 
   if (running) pauseTimer();
@@ -196,10 +196,10 @@ function tick() {
 
 async function triggerAlarm() {
   const msg = alarmMsgs[Math.floor(Math.random() * alarmMsgs.length)];
-  elements.alarmEmoji.textContent = msg.emoji;
-  elements.alarmTitle.textContent = msg.title;
-  elements.alarmSub.textContent = msg.sub;
-  elements.alarmOverlay.classList.add('show');
+  if(elements.alarmEmoji) elements.alarmEmoji.textContent = msg.emoji;
+  if(elements.alarmTitle) elements.alarmTitle.textContent = msg.title;
+  if(elements.alarmSub) elements.alarmSub.textContent = msg.sub;
+  if(elements.alarmOverlay) elements.alarmOverlay.classList.add('show');
   spawnConfetti();
   playFunnySound(); 
   await saveSession();
@@ -207,22 +207,21 @@ async function triggerAlarm() {
 
 function closeAlarm() {
   stopFunnySound(); 
-  elements.alarmOverlay.classList.remove('show');
+  if(elements.alarmOverlay) elements.alarmOverlay.classList.remove('show');
   elements.btnStart.textContent = 'Again? 💪';
   elements.timerStatus.textContent = 'done! 🏆';
-  elements.motiveTicker.textContent = "that's the glow-up era bestie 🌟";
 }
 
 function snooze() {
   stopFunnySound(); 
-  elements.alarmOverlay.classList.remove('show');
+  if(elements.alarmOverlay) elements.alarmOverlay.classList.remove('show');
   totalSeconds = 30;
   remaining = 30;
   updateDisplay();
   startTimerGo();
 }
 
-// --- PREVIOUS FETCHING & UTILS ---
+// --- RENDERING & UTILS ---
 async function fetchExercises() {
   const response = await fetch(`${API_BASE}/exercises`);
   const data = await response.json();
@@ -250,9 +249,18 @@ function renderExercises() {
     </div>`).join('');
 }
 
+function renderHistory(history) {
+    if (!elements.historyList) return;
+    elements.historyList.innerHTML = history.map(item => {
+        const date = new Date(item.recordedAt).toLocaleString();
+        return `<div class="history-item"><span>${item.exerciseId}</span><span>${date}</span></div>`;
+    }).join('');
+}
+
 window.selectExercise = function(id) {
   document.querySelectorAll('.exercise-card').forEach(c => c.classList.remove('selected'));
-  document.getElementById(`card-${id}`).classList.add('selected');
+  const card = document.getElementById(`card-${id}`);
+  if(card) card.classList.add('selected');
   selected = exercises.find(e => e.id === id);
   elements.noSelectMsg.style.display = 'none';
   elements.timerContent.style.display = 'block';
@@ -263,7 +271,7 @@ window.selectExercise = function(id) {
 
 function renderPresets() {
   elements.presetsRow.innerHTML = selected.recs.map((r, i) => `
-    <button class="preset-btn" onclick="applyPreset(${r})">${r}s — ${selected.tips[i]}</button>`).join('');
+    <button class="preset-btn" onclick="applyPreset(${r})">${r}s</button>`).join('');
 }
 
 window.applyPreset = function(s) { totalSeconds = s; remaining = s; setInputs(); updateDisplay(); };
@@ -293,7 +301,6 @@ async function saveSession() {
 }
 
 async function playFunnySound() {
-  if (audioCtx.state === 'suspended') await audioCtx.resume();
   beatInterval = setInterval(() => {
     const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
     osc.connect(gain); gain.connect(audioCtx.destination);
@@ -314,18 +321,20 @@ function stopFunnySound() {
 }
 
 function spawnConfetti() {
-  for (let i = 0; i < 18; i++) {
+  const card = document.getElementById('alarmCard');
+  if(!card) return;
+  for (let i = 0; i < 10; i++) {
     const dot = document.createElement('div');
     dot.style.cssText = `position:absolute; width:8px; height:8px; background:pink; left:${Math.random()*100}%; top:0;`;
-    document.getElementById('alarmCard').appendChild(dot);
+    card.appendChild(dot);
     setTimeout(() => dot.remove(), 3000);
   }
 }
 
 function updateStats(s) {
-  elements.statSessions.textContent = s.sessions;
-  elements.statMinutes.textContent = s.totalMinutes;
-  elements.statStreak.textContent = s.sets;
+  if(elements.statSessions) elements.statSessions.textContent = s.sessions;
+  if(elements.statMinutes) elements.statMinutes.textContent = s.totalMinutes;
+  if(elements.statStreak) elements.statStreak.textContent = s.sets;
 }
 
 initApp();
