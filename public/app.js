@@ -301,6 +301,9 @@ async function saveSession() {
 }
 
 async function playFunnySound() {
+  if (audioCtx.state === 'suspended') await audioCtx.resume();
+  
+  // Start the beeps
   beatInterval = setInterval(() => {
     const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
     osc.connect(gain); gain.connect(audioCtx.destination);
@@ -308,11 +311,28 @@ async function playFunnySound() {
     gain.gain.setValueAtTime(0.3, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+0.1);
     osc.start(); osc.stop(audioCtx.currentTime+0.1);
   }, 400);
+
+  // Start the "Slay" Speech
   speechInterval = setInterval(() => {
     const msg = new SpeechSynthesisUtterance(unhingedPhrases[Math.floor(Math.random()*unhingedPhrases.length)]);
-    msg.pitch = 1.2; msg.rate = 0.9; window.speechSynthesis.speak(msg);
+    
+    // THE VOICE PICKER LOGIC
+    let voices = window.speechSynthesis.getVoices();
+    
+    // Priority: Samantha (iOS), Zira (Windows), Google Female, or any Female voice
+    const bestieVoice = voices.find(v => v.name.includes('Samantha')) || 
+                        voices.find(v => v.name.includes('Zira')) || 
+                        voices.find(v => v.name.includes('Google US English')) ||
+                        voices.find(v => v.name.includes('Female')) ||
+                        voices[0];
+
+    msg.voice = bestieVoice;
+    msg.pitch = 1.3; // Higher pitch for that "bestie" vibe
+    msg.rate = 0.95; 
+    window.speechSynthesis.speak(msg);
   }, 5000);
 }
+
 
 function stopFunnySound() {
   window.speechSynthesis.cancel();
