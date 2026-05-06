@@ -519,7 +519,8 @@ body {
 
       <!-- AI COACH INTERFACE -->
       <div class="ai-coach-overlay" id="aiCoachContainer">
-        <video id="input_video" style="display:none;"></video>
+        <!-- Add 'playsinline' and 'autoplay' for mobile support -->
+        <video id="input_video" style="display:none;" playsinline autoplay muted></video>  
         <canvas id="output_canvas" width="640" height="480"></canvas>
         <div class="ai-status-tag">AI Coaching Era Activated ✨</div>
         <div class="ai-feedback-toast" id="aiFeedback">Position yourself in view...</div>

@@ -114,18 +114,53 @@ function setupAiCoach() {
 async function toggleAiCoach() {
     const container = document.getElementById('aiCoachContainer');
     const videoElement = document.getElementById('input_video');
+    const canvasElement = document.getElementById('output_canvas');
+    const canvasCtx = canvasElement.getContext('2d');
+    
     isAiActive = !isAiActive;
+    
     if (isAiActive) {
         container.style.display = 'block';
-        camera = new Camera(videoElement, {
-            onFrame: async () => { await pose.send({ image: videoElement }); },
-            width: 640, height: 480
-        });
-        camera.start();
-        elements.toggleAiBtn.innerText = "Stop AI Coach 🛑";
+        
+        try {
+            // Initialize the MediaPipe Camera utility
+            camera = new Camera(videoElement, {
+                onFrame: async () => {
+                    await pose.send({ image: videoElement });
+                },
+                width: 640,
+                height: 480
+            });
+            
+            // Start the camera and explicitly call play() for mobile browsers
+            await camera.start();
+            videoElement.play(); 
+            
+            elements.toggleAiBtn.innerText = "Stop AI Coach 🛑";
+            if (elements.aiFeedback) elements.aiFeedback.innerText = "Position yourself in view... ✨";
+            
+        } catch (err) {
+            console.error("Camera failed:", err);
+            isAiActive = false;
+            container.style.display = 'none';
+            alert("Check your camera permissions, bestie! ✨");
+        }
     } else {
+        // --- STOP LOGIC ---
+        
+        // 1. Stop the camera stream to save battery and turn off the 'green light'
+        if (camera) {
+            await camera.stop();
+            camera = null;
+        }
+
+        // 2. Clear the canvas so the last frame isn't stuck there
+        if (canvasCtx) {
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+        }
+
+        // 3. Reset the UI
         container.style.display = 'none';
-        if (camera) await camera.stop();
         elements.toggleAiBtn.innerText = "Toggle AI Coach 🎥";
     }
 }
