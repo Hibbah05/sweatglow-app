@@ -12,6 +12,11 @@ let timerInterval = null;
 let motiveInterval = null;
 let motiveIndex = 0;
 
+// --- AI COACH STATE ---
+let pose = null;
+let camera = null;
+let isAiActive = false;
+
 // --- CHIPMUNK & MOTIVATION SETUP ---
 let speechInterval = null;
 let beatInterval = null;
@@ -40,6 +45,12 @@ const motivations = [
   "the grind is cute when YOU do it 💖",
   "stay focused bestie, almost there! 🌟",
 ];
+
+const feedbackMessages = {
+    squats: (angle) => angle > 160 ? "Down we go! ⬇️" : angle < 100 ? "Perfect depth! Slay 💅" : "Lower, bestie!",
+    planks: (angle) => angle > 170 ? "Back is straight! 🔥" : "Keep that core tight!",
+    default: "I see you! Let's get it ✨"
+};
 
 const alarmMsgs = [
   { emoji:'🌸', title:'WORKOUT COMPLETED!', sub:'you are literally THAT girl 💅' },
@@ -76,6 +87,7 @@ const elements = {
   statMinutes: document.getElementById('statMinutes'),
   statStreak: document.getElementById('statStreak'),
   historyList: document.getElementById('historyList'),
+  toggleAiBtn: document.getElementById('toggleAiBtn'), // New AI Button
 };
 
 async function initApp() {
@@ -85,13 +97,93 @@ async function initApp() {
   elements.btnDone.addEventListener('click', closeAlarm);
   elements.minInput.addEventListener('change', handleInputChange);
   elements.secInput.addEventListener('change', handleInputChange);
+  elements.toggleAiBtn.addEventListener('click', toggleAiCoach); // New AI Listener
 
   await fetchExercises();
   await fetchStats();
   await fetchHistory();
+  setupAiCoach(); // Initialize AI
   updateDisplay();
 }
 
+// --- AI COACH ENGINE ---
+function setupAiCoach() {
+    pose = new Pose({
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
+    });
+
+    pose.setOptions({
+        modelComplexity: 1,
+        smoothLandmarks: true,
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5
+    });
+
+    pose.onResults(onPoseResults);
+}
+
+async function toggleAiCoach() {
+    const container = document.getElementById('aiCoachContainer');
+    const videoElement = document.getElementById('input_video');
+    
+    isAiActive = !isAiActive;
+    
+    if (isAiActive) {
+        container.style.display = 'block';
+        camera = new Camera(videoElement, {
+            onFrame: async () => {
+                await pose.send({ image: videoElement });
+            },
+            width: 640,
+            height: 480
+        });
+        camera.start();
+        elements.toggleAiBtn.innerText = "Stop AI Coach 🛑";
+    } else {
+        container.style.display = 'none';
+        if (camera) await camera.stop();
+        elements.toggleAiBtn.innerText = "Toggle AI Coach 🎥";
+    }
+}
+
+function onPoseResults(results) {
+    const canvasElement = document.getElementById('output_canvas');
+    const canvasCtx = canvasElement.getContext('2d');
+    const feedback = document.getElementById('aiFeedback');
+
+    canvasCtx.save();
+    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+    
+    // Draw Camera Feed
+    canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+    if (results.poseLandmarks) {
+        // Draw Skeleton Dots and Lines
+        drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, { color: '#c4b5fd', lineWidth: 4 });
+        drawLandmarks(canvasCtx, results.poseLandmarks, { color: '#ec4899', lineWidth: 2 });
+
+        // Logic for Squats (Right Hip=24, Knee=26, Ankle=28)
+        const hip = results.poseLandmarks[24];
+        const knee = results.poseLandmarks[26];
+        const ankle = results.poseLandmarks[28];
+
+        if (hip && knee && ankle) {
+            const angle = calculateAngle(hip, knee, ankle);
+            const msgFunc = feedbackMessages[selected?.id] || feedbackMessages.default;
+            feedback.innerText = msgFunc(angle);
+        }
+    }
+    canvasCtx.restore();
+}
+
+function calculateAngle(a, b, c) {
+    const radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
+    let angle = Math.abs((radians * 180.0) / Math.PI);
+    if (angle > 180.0) angle = 360 - angle;
+    return angle;
+}
+
+// --- ORIGINAL DATA FETCHING ---
 async function fetchExercises() {
   try {
     const response = await fetch(`${API_BASE}/exercises`);
@@ -200,7 +292,6 @@ function setInputs() {
 function getInputTotal() {
   return (parseInt(elements.minInput.value, 10) || 0) * 60 + (parseInt(elements.secInput.value, 10) || 0);
 }
-
 
 function startTimerGo() {
   if (!timerInterval) {
@@ -312,7 +403,7 @@ async function saveSession() {
     if (response.ok) {
       const stats = await response.json();
       updateStats(stats);
-      await fetchHistory(); // <--- THIS line updates your "Glow-up Log"
+      await fetchHistory(); 
     }
   } catch (error) {
     console.warn('Could not save session:', error);
@@ -320,7 +411,7 @@ async function saveSession() {
 }
 
 function closeAlarm() {
-  stopFunnySound(); // This must happen first!
+  stopFunnySound(); 
   elements.alarmOverlay.classList.remove('show');
   elements.btnStart.textContent = 'Again? 💪';
   elements.timerStatus.textContent = 'done! 🏆';
@@ -339,15 +430,11 @@ function snooze() {
   elements.timerStatus.textContent = 'snoozed 30s 😮‍💨';
 }
 
-
 function toggleTimer() {
-  // --- THE MOBILE UNLOCK ---
-  // We initialize the AudioContext on the VERY FIRST tap
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   }
   
-  // Create a silent "ping" to tell iOS we are a media app
   const silent = new SpeechSynthesisUtterance("");
   window.speechSynthesis.speak(silent);
   
@@ -367,12 +454,10 @@ async function playFunnySound() {
   
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   
-  // THE FIX: Always resume before starting the beeps
   if (audioCtx.state === 'suspended') {
     await audioCtx.resume();
   }
 
-  // The Beep Logic
   beatInterval = setInterval(() => {
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
@@ -391,11 +476,8 @@ async function playFunnySound() {
       if (!speechInterval) return; 
 
       const message = new SpeechSynthesisUtterance(unhingedPhrases[Math.floor(Math.random() * unhingedPhrases.length)]);
-      
-      // THE FIX: Wait for voices to load and filter properly
       let voices = window.speechSynthesis.getVoices();
       
-      // Priority list: Samantha (Premium iOS), Zira (Windows), or any English Female
       const bestie = voices.find(v => v.name.includes('Samantha')) || 
                      voices.find(v => v.name.includes('Zira')) || 
                      voices.find(v => v.name.includes('Google US English')) ||
@@ -403,8 +485,8 @@ async function playFunnySound() {
                      voices[0];
 
       message.voice = bestie;
-      message.pitch = 1.2; // Lowered pitch slightly to avoid "weird" robotic sounds
-      message.rate = 0.9;  // Slightly slower for clarity
+      message.pitch = 1.2; 
+      message.rate = 0.9;  
       message.volume = 1.0; 
 
       window.speechSynthesis.speak(message);
@@ -414,6 +496,7 @@ async function playFunnySound() {
     speakRandom(); 
   }, 1000); 
 }
+
 function spawnConfetti() {
   const card = document.getElementById('alarmCard');
   const colors = ['#f472b6', '#a855f7', '#818cf8', '#fde68a', '#34d399'];
@@ -436,24 +519,16 @@ function spawnConfetti() {
 }
 
 function stopFunnySound() {
-  // 1. Force stop the speech engine immediately
   window.speechSynthesis.cancel();
-
-  // 2. Clear the intervals
   if (speechInterval) {
     clearInterval(speechInterval);
     speechInterval = null;
   }
-  
   if (beatInterval) {
     clearInterval(beatInterval);
     beatInterval = null;
   }
-
-  // 3. Kill the AudioContext (the beeping)
   if (audioCtx && audioCtx.state !== 'closed') {
-    // We don't close it (so we can reuse it), but we suspend it 
-    // to make sure no oscillators can make noise
     audioCtx.suspend();
   }
 }
@@ -466,7 +541,6 @@ function updateStats(stats) {
 
 initApp();
 
-// Pre-load voices for laptop browsers
 window.speechSynthesis.onvoiceschanged = () => {
   window.speechSynthesis.getVoices();
 };

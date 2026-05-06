@@ -2,6 +2,15 @@
 <html>
 <head>
 <meta charset="UTF-8">
+<title>SweatGlow | AI Fitness Era</title>
+<!-- 
+  MEDIA PIPE LIBRARIES: 
+  These are essential for the Computer Vision logic. 
+-->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils"></script>
+
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap');
 
@@ -27,7 +36,7 @@ body {
   background: linear-gradient(160deg, #fce7f3 0%, #ede9fe 40%, #ddd6fe 100%);
   min-height: 100vh;
   color: var(--text);
-  overflow: hidden; /* Important for the dual-scroll sidebar layout */
+  overflow: hidden; 
 }
 
 /* --- SIDEBAR LAYOUT WRAPPER --- */
@@ -51,7 +60,6 @@ body {
   transform: translateX(0);
 }
 
-/* Minimize State */
 .sidebar.collapsed {
   transform: translateX(-100%);
   width: 0;
@@ -64,7 +72,7 @@ body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
-  min-width: 260px; /* Prevents text squishing during animation */
+  min-width: 260px;
 }
 
 .history-list {
@@ -73,7 +81,6 @@ body {
   padding-right: 8px;
 }
 
-/* Custom Scrollbar for Sidebar */
 .history-list::-webkit-scrollbar { width: 4px; }
 .history-list::-webkit-scrollbar-track { background: var(--softer); }
 .history-list::-webkit-scrollbar-thumb { background: var(--lavender); border-radius: 10px; }
@@ -93,7 +100,54 @@ body {
   width: 100%;
 }
 
-/* --- TOGGLE BUTTONS --- */
+/* --- AI COACH STYLES --- */
+.ai-coach-overlay {
+  display: none; /* Hidden by default */
+  margin-bottom: 20px;
+  position: relative;
+  border-radius: 24px;
+  overflow: hidden;
+  border: 3px solid var(--purple);
+  box-shadow: 0 10px 30px rgba(168,85,247,0.2);
+  background: black;
+}
+
+#output_canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.ai-status-tag {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: var(--grad3);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  font-family: 'Syne', sans-serif;
+}
+
+.ai-feedback-toast {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 10px 20px;
+  border-radius: 15px;
+  color: var(--purple);
+  font-weight: 700;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  border: 1.5px solid var(--border);
+  white-space: nowrap;
+}
+
+/* --- PREVIOUS STYLES --- */
 .toggle-btn {
   background: var(--soft);
   border: 1.5px solid var(--border);
@@ -119,12 +173,11 @@ body {
   font-size: 11px;
   font-weight: 800;
   cursor: pointer;
-  display: none; /* Hidden when sidebar is open */
+  display: none;
   box-shadow: 0 4px 12px rgba(168,85,247,0.1);
   z-index: 5;
   transition: 0.3s;
 }
-.open-btn:hover { transform: translateX(5px); background: var(--soft); }
 
 .header {
   text-align: center;
@@ -184,8 +237,6 @@ body {
   transition: transform 0.3s ease;
 }
 
-.exercise-card:hover .ex-photo { transform: scale(1.1); }
-
 .exercise-card {
   background: white;
   border: 1.5px solid var(--border);
@@ -199,23 +250,9 @@ body {
   box-shadow: 0 2px 12px rgba(168,85,247,0.06);
 }
 
-.exercise-card::after {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
-  background: var(--grad1);
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.exercise-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(168,85,247,0.15); }
-.exercise-card:hover::after { opacity: 1; }
-
 .exercise-card.selected {
   border-color: var(--purple);
   background: linear-gradient(135deg, #fdf4ff, #f5f3ff);
-  box-shadow: 0 6px 24px rgba(168,85,247,0.2);
 }
 
 .ex-name {
@@ -239,16 +276,6 @@ body {
   box-shadow: 0 4px 32px rgba(168,85,247,0.1);
   position: relative;
   overflow: hidden;
-}
-
-.timer-panel::before {
-  content: '';
-  position: absolute;
-  top: -40px; right: -40px;
-  width: 160px; height: 160px;
-  background: linear-gradient(135deg, #f0abfc44, #c084fc22);
-  border-radius: 50%;
-  pointer-events: none;
 }
 
 .selected-label {
@@ -279,10 +306,6 @@ body {
   margin: 0 auto 20px;
 }
 
-.ring-wrap.pulsing { animation: pulseRing 1s ease-in-out infinite; }
-@keyframes pulseRing { 50% { transform: scale(1.03); } }
-
-.progress-svg { transform: rotate(-90deg); }
 .ring-bg { fill: none; stroke: #f3e8ff; stroke-width: 10; }
 .ring-fill {
   fill: none;
@@ -420,29 +443,12 @@ body {
 
 .stat-lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; }
 
-/* INDIVIDUAL HISTORY ITEM STYLING */
 .history-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 12px 10px;
   border-bottom: 1px solid var(--softer);
-  transition: background 0.2s;
-}
-
-.history-item:hover { background: var(--soft); border-radius: 8px; }
-
-.hist-info { display: flex; flex-direction: column; }
-.hist-name { font-weight: 700; font-size: 13px; color: var(--text); font-family: 'Syne', sans-serif; }
-.hist-date { font-size: 10px; color: var(--muted); }
-.hist-tag { 
-  background: var(--soft); 
-  color: var(--purple); 
-  padding: 4px 10px; 
-  border-radius: 99px; 
-  font-size: 10px; 
-  font-weight: 800; 
-  font-family: 'Syne', sans-serif;
 }
 
 .alarm-overlay {
@@ -465,8 +471,6 @@ body {
   max-width: 400px;
   width: 100%;
   text-align: center;
-  position: relative;
-  overflow: hidden;
 }
 
 .alarm-emoji { font-size: 64px; display: block; margin-bottom: 14px; }
@@ -481,14 +485,11 @@ body {
   margin-bottom: 8px;
 }
 
-.alarm-btns { display: flex; gap: 12px; justify-content: center; margin-top: 20px; }
-
 @media (max-width: 900px) {
   .app-container { flex-direction: column; overflow-y: auto; }
   .sidebar { width: 100%; height: auto; transform: none !important; border-right: none; border-bottom: 1.5px solid var(--border); }
   .toggle-btn, .open-btn { display: none !important; }
 }
-
 </style>
 </head>
 <body>
@@ -516,6 +517,14 @@ body {
         <div class="tagline">girlboss your fitness era</div>
       </div>
 
+      <!-- AI COACH INTERFACE -->
+      <div class="ai-coach-overlay" id="aiCoachContainer">
+        <video id="input_video" style="display:none;"></video>
+        <canvas id="output_canvas" width="640" height="480"></canvas>
+        <div class="ai-status-tag">AI Coaching Era Activated ✨</div>
+        <div class="ai-feedback-toast" id="aiFeedback">Position yourself in view...</div>
+      </div>
+
       <div class="section-title">pick your vibe 💅</div>
       <div class="exercises-grid" id="exerciseGrid"></div>
 
@@ -527,6 +536,14 @@ body {
 
         <div id="timerContent" style="display:none;">
           <div class="selected-label" id="exLabel">—</div>
+          
+          <!-- AI ERA TOGGLE -->
+          <div style="margin-bottom: 20px;">
+             <button class="preset-btn" id="toggleAiBtn" style="background: var(--grad1); color: white; border: none; padding: 8px 20px;">
+               Toggle AI Coach 🎥
+             </button>
+          </div>
+
           <div class="motivation-ticker" id="motiveTicker">let's get it bestie ✨</div>
 
           <div class="ring-wrap" id="ringWrap">
@@ -577,28 +594,20 @@ body {
   <div class="alarm-card" id="alarmCard">
     <span class="alarm-emoji" id="alarmEmoji">🌸</span>
     <div class="alarm-title" id="alarmTitle">SLAY COMPLETED!</div>
-    <div class="alarm-sub" id="alarmSub">you are literally THAT girl 💅</div>
+    <div class="alarm-sub">you are literally THAT girl 💅</div>
     <div class="alarm-btns">
-      <button class="btn-snooze" id="btnSnooze">Snooze 30s 😮‍💨</button>
-      <button class="btn-done" id="btnDone">Done! 🎀</button>
+      <button class="btn-ghost" id="btnSnooze">Snooze 30s 😮‍💨</button>
+      <button class="btn-main" id="btnDone">Done! 🎀</button>
     </div>
   </div>
 </div>
 
 <script>
-  // Sidebar Toggle Logic
   function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
     const openBtn = document.getElementById('openBtn');
-    
     sidebar.classList.toggle('collapsed');
-    
-    // Toggle the visible button on the main screen
-    if (sidebar.classList.contains('collapsed')) {
-      openBtn.style.display = 'block';
-    } else {
-      openBtn.style.display = 'none';
-    }
+    openBtn.style.display = sidebar.classList.contains('collapsed') ? 'block' : 'none';
   }
 </script>
 <script src="/app.js"></script>
