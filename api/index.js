@@ -96,3 +96,4 @@ app.post('/api/session', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+// Final check for Supabase sync
