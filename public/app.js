@@ -1,3 +1,6 @@
+// Add this at the very top of your app.js to keep track of the AudioContext
+let audioCtx;
+
 const API_BASE = '/api';
 const circumference = 2 * Math.PI * 88;
 let exercises = [];
@@ -198,22 +201,6 @@ function getInputTotal() {
   return (parseInt(elements.minInput.value, 10) || 0) * 60 + (parseInt(elements.secInput.value, 10) || 0);
 }
 
-// --- UPDATED START HANDLER WITH MOBILE UNLOCK ---
-function toggleTimer() {
-  // 1. MOBILE VOICE UNLOCK: Speak a silent message on user tap
-  const silentMsg = new SpeechSynthesisUtterance("");
-  window.speechSynthesis.speak(silentMsg);
-
-  // 2. MOBILE AUDIO UNLOCK: Resume audio context if it exists
-  const dummyCtx = new (window.AudioContext || window.webkitAudioContext)();
-  if (dummyCtx.state === 'suspended') dummyCtx.resume();
-
-  if (running) {
-    pauseTimer();
-  } else {
-    startTimerGo();
-  }
-}
 
 function startTimerGo() {
   if (!timerInterval) {
@@ -352,47 +339,69 @@ function snooze() {
   elements.timerStatus.textContent = 'snoozed 30s 😮‍💨';
 }
 
+
+function toggleTimer() {
+  // --- THE MOBILE UNLOCK ---
+  // We initialize the AudioContext on the VERY FIRST tap
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  
+  // Create a silent "ping" to tell iOS we are a media app
+  const silent = new SpeechSynthesisUtterance("");
+  window.speechSynthesis.speak(silent);
+  
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+
+  if (running) {
+    pauseTimer();
+  } else {
+    startTimerGo();
+  }
+}
+
 async function playFunnySound() {
   window.speechSynthesis.cancel();
   
-  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  // Ensure AudioContext is alive
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   if (audioCtx.state === 'suspended') await audioCtx.resume();
 
+  // The Beep Logic
   beatInterval = setInterval(() => {
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     osc.connect(gain);
     gain.connect(audioCtx.destination);
-    osc.frequency.setValueAtTime(900, audioCtx.currentTime); 
+    osc.frequency.setValueAtTime(800, audioCtx.currentTime); 
     osc.type = 'square'; 
-    gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
     osc.start();
-    osc.stop(audioCtx.currentTime + 0.15);
-  }, 300); 
+    osc.stop(audioCtx.currentTime + 0.1);
+  }, 400); 
 
   setTimeout(() => {
     const speakRandom = () => {
       if (!speechInterval) return; 
 
-      const randomText = unhingedPhrases[Math.floor(Math.random() * unhingedPhrases.length)];
-      const message = new SpeechSynthesisUtterance(randomText);
+      const message = new SpeechSynthesisUtterance(unhingedPhrases[Math.floor(Math.random() * unhingedPhrases.length)]);
       
+      // THE FIX: Wait for voices to load and filter properly
       let voices = window.speechSynthesis.getVoices();
       
-      // Expanded search for Female voices on Windows/Mac/Mobile
-      const femaleVoice = voices.find(v => 
-        v.name.includes('Samantha') || 
-        v.name.includes('Zira') || 
-        v.name.includes('Google US English') || 
-        v.name.includes('Female') || 
-        v.lang.startsWith('en')
-      );
-      
-      if (femaleVoice) message.voice = femaleVoice;
-      
-      message.pitch = 1.6; 
-      message.rate = 0.9; // SLOWED DOWN from 1.4 to 0.9
+      // Priority list: Samantha (Premium iOS), Zira (Windows), or any English Female
+      const bestie = voices.find(v => v.name.includes('Samantha')) || 
+                     voices.find(v => v.name.includes('Zira')) || 
+                     voices.find(v => v.name.includes('Google US English')) ||
+                     voices.find(v => v.name.includes('Female')) ||
+                     voices[0];
+
+      message.voice = bestie;
+      message.pitch = 1.2; // Lowered pitch slightly to avoid "weird" robotic sounds
+      message.rate = 0.9;  // Slightly slower for clarity
       message.volume = 1.0; 
 
       window.speechSynthesis.speak(message);
@@ -400,17 +409,8 @@ async function playFunnySound() {
 
     speechInterval = setInterval(speakRandom, 5000);
     speakRandom(); 
-  }, 1500); 
+  }, 1000); 
 }
-
-function stopFunnySound() {
-  clearInterval(speechInterval);
-  clearInterval(beatInterval);
-  speechInterval = null;
-  beatInterval = null;
-  window.speechSynthesis.cancel();
-}
-
 function spawnConfetti() {
   const card = document.getElementById('alarmCard');
   const colors = ['#f472b6', '#a855f7', '#818cf8', '#fde68a', '#34d399'];
