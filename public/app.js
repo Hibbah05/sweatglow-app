@@ -320,7 +320,7 @@ async function saveSession() {
 }
 
 function closeAlarm() {
-  stopFunnySound(); 
+  stopFunnySound(); // This must happen first!
   elements.alarmOverlay.classList.remove('show');
   elements.btnStart.textContent = 'Again? 💪';
   elements.timerStatus.textContent = 'done! 🏆';
@@ -365,9 +365,12 @@ function toggleTimer() {
 async function playFunnySound() {
   window.speechSynthesis.cancel();
   
-  // Ensure AudioContext is alive
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  if (audioCtx.state === 'suspended') await audioCtx.resume();
+  
+  // THE FIX: Always resume before starting the beeps
+  if (audioCtx.state === 'suspended') {
+    await audioCtx.resume();
+  }
 
   // The Beep Logic
   beatInterval = setInterval(() => {
@@ -429,6 +432,29 @@ function spawnConfetti() {
     `;
     card.appendChild(dot);
     setTimeout(() => dot.remove(), 3000);
+  }
+}
+
+function stopFunnySound() {
+  // 1. Force stop the speech engine immediately
+  window.speechSynthesis.cancel();
+
+  // 2. Clear the intervals
+  if (speechInterval) {
+    clearInterval(speechInterval);
+    speechInterval = null;
+  }
+  
+  if (beatInterval) {
+    clearInterval(beatInterval);
+    beatInterval = null;
+  }
+
+  // 3. Kill the AudioContext (the beeping)
+  if (audioCtx && audioCtx.state !== 'closed') {
+    // We don't close it (so we can reuse it), but we suspend it 
+    // to make sure no oscillators can make noise
+    audioCtx.suspend();
   }
 }
 
